@@ -1,0 +1,433 @@
+import React, { useState, createContext, useContext, useEffect } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, TextInput, Image, Alert } from 'react-native';
+import Video from 'react-native-video'; // Asegúrate de que esta línea esté aquí y no comentada
+
+// Contexto para el estado global de la aplicación
+const AppContext = createContext();
+
+// Proveedor del contexto
+const AppProvider = ({ children }) => {
+    const [currentScreen, setCurrentScreen] = useState('home');
+    const [currentUnit, setCurrentUnit] = useState(null);
+    const [currentTopic, setCurrentTopic] = useState(null);
+    const [userProgress, setUserProgress] = useState({
+        units: {
+            1: { completedTopics: [], evaluationPassed: false },
+            2: { completedTopics: [], evaluationPassed: false },
+            3: { completedTopics: [], evaluationPassed: false },
+        },
+    });
+    const [evaluationScore, setEvaluationScore] = useState(0);
+
+    const navigateTo = (screen, unit = null, topic = null) => {
+        setCurrentScreen(screen);
+        if (unit !== null) setCurrentUnit(unit);
+        if (topic !== null) setCurrentTopic(topic);
+    };
+
+    const markTopicCompleted = (unitId, topicId) => {
+        setUserProgress(prev => {
+            const unitProgress = prev.units[unitId] || { completedTopics: [], evaluationPassed: false };
+            const newCompletedTopics = new Set(unitProgress.completedTopics);
+            newCompletedTopics.add(topicId);
+            return {
+                ...prev,
+                units: {
+                    ...prev.units,
+                    [unitId]: { ...unitProgress, completedTopics: Array.from(newCompletedTopics) },
+                },
+            };
+        });
+    };
+
+    const markUnitEvaluationPassed = (unitId, passed) => {
+        setUserProgress(prev => ({
+            ...prev,
+            units: {
+                ...prev.units,
+                [unitId]: { ...(prev.units[unitId] || { completedTopics: [] }), evaluationPassed: passed },
+            },
+        }));
+    };
+
+    return (
+        <AppContext.Provider value={{
+            currentScreen, currentUnit, currentTopic, userProgress, evaluationScore,
+            navigateTo, markTopicCompleted, setEvaluationScore, markUnitEvaluationPassed
+        }}>
+            {children}
+        </AppContext.Provider>
+    );
+};
+
+// --- Datos de la Aplicación ---
+const appData = {
+    units: [
+        { // UNIDAD 1
+            id: 1,
+            title: "Nuevos Recursos",
+            topics: [
+                {
+                    id: 1, title: "El libro electrónico",
+                    content: [ { type: 'paragraph', text: 'Los adultos se jactan de Internet atraídos por la fotografía digital, el envío de correos y la observación de videos. El auge de los dispositivos portátiles y los teléfonos inteligentes (smartphones) han contribuido notablemente a la expansión de la digitalización.' }, { type: 'image', uri: require('./assets/images/articulo_tecnologico.png') }, { type: 'paragraph', text: 'Hoy en día, la utilización del correo electrónico, el chat, los foros y blogs, la búsqueda de información general y la entrada en mundos virtuales, según el estudio "La sociedad de la información en España 2010", elaborado por la Fundación Telefónica. En polo contrario, los jóvenes están empezando a abandonar algunos de los canales de comunicación del mundo digital, como el correo electrónico o los mensajes SMS.' }, { type: 'paragraph', text: 'Ahora se decantan por las redes sociales como la herramienta favorita para comunicarse con sus amigos. «España es ya una sociedad digital», proclamó ayer el presidente de Telefónica.' }, { type: 'image', uri: require('./assets/images/empobrecimiento_lenguaje.png') }, { type: 'paragraph', text: 'Pocos dudan que Internet sea una revolución tan importante como la que produjo Gutenberg con la imprenta. Sobre el futuro del lenguaje, en cambio, hay más dudas, porque todo indica que este ha empezado a perder parte de su energía y, en consecuencia, el género humano está volviéndose menos humano. Ese es el peligro real que, entre otros, ya advirtió George Steiner en 1971.' }, { type: 'paragraph', text: '"No había caído hasta hoy en que estamos en mayo. ¿Es el Mayo del 11 que contaremos a nuestros nietos?"', style: { fontStyle: 'italic', fontWeight: 'bold' } }, { type: 'paragraph', text: '¿Cómo se contará? Esa es la cuestión, como diría Hamlet. ¿Se narrará utilizando todos los resortes literarios de la complejidad que tanto pueden ayudar a profundizar en el laberinto de la realidad, o bien con el lenguaje surgido de la taquigrafía del tuit? En la «Spanishrevolution» se ha visto cómo los tuits son un atentado contra la complejidad del mundo que pretenden leer.' }, ],
+                    video: require('./assets/videos/video_muestra.mp4'),
+                    activity: { type: "complete_words", instructions: "Completa las palabras clave relacionadas con la digitalización y el libro electrónico. Escribe las letras que faltan.", questions: [ { word: "DIGITALIZACION", hint: "DIGIT_LIZACION", missing: "A" }, { word: "TELEFONOS", hint: "TEL_FONOS", missing: "E" }, { word: "BLOGS", hint: "BL_GS", missing: "O" }, { word: "TUITS", hint: "T_ITS", missing: "U" }, ], },
+                },
+                {
+                    id: 2, title: "Internet",
+                    content: [ { type: 'paragraph', text: 'Internet es una herramienta de comunicación muy útil que ofrece numerosas ventajas:' }, { type: 'list', items: [ { text: 'Conexión: Multitud de computadoras en todo el mundo.', style: { fontWeight: 'bold' } }, { text: 'Rapidez: A la hora de buscar la información que necesitas.', style: { fontWeight: 'bold' } }, { text: 'Acceso a archivos: (Imágenes, música...) en algunas páginas web.', style: { fontWeight: 'bold' } }, ]}, { type: 'image', uri: require('./assets/images/ventajas_internet.png') }, { type: 'paragraph', text: 'El inconveniente principal es que, en ocasiones, es tanta la información que se ofrece sobre un tema que es complicado seleccionarla y evaluarla de manera correcta.' }, ],
+                    activity: { type: "true_false", instructions: "Lee las afirmaciones y decide si son Verdaderas o Falsas según lo aprendido sobre Internet.", questions: [ { text: "Internet conecta multitud de computadoras en todo el mundo.", answer: true }, { text: "Una de las desventajas de Internet es que la información es siempre fácil de seleccionar y evaluar.", answer: false }, { text: "Gracias a Internet, el acceso a archivos (imágenes, música) en páginas web es posible.", answer: true }, ], },
+                },
+                {
+                    id: 3, title: "Los textos publicitarios",
+                    content: [ { type: 'paragraph', text: 'La persuasión es el acto de inducir a alguien, con razones, a hacer o creer algo. Es decir que persuadir es convencer utilizando el lenguaje de una manera eficiente y poderosa.', style: { fontWeight: 'bold' } }, { type: 'paragraph', text: 'En la actualidad, estamos rodeados de textos publicitarios. Su objetivo es persuadir al lector o espectador a comprar un producto.' }, { type: 'heading', level: 3, text: 'Elementos de un Anuncio Publicitario:' }, { type: 'list', items: [ { text: 'Imagen: Parte visual que sugiere una idea.', style: { fontWeight: 'bold' } }, { text: 'Eslogan: Frase corta y atractiva.', style: { fontWeight: 'bold' } }, { text: 'Texto: Cuerpo que desarrolla el mensaje.', style: { fontWeight: 'bold' } }, ]}, { type: 'image', uri: require('./assets/images/elementos_anuncio.png') }, { type: 'heading', level: 3, text: 'El Modelo AIDA:' }, { type: 'list', items: [ { text: 'Atención, Interés, Deseo, Acción' }]}, { type: 'image', uri: require('./assets/images/modelo_aida_medios.png') }, ],
+                    activity: { type: "match_lines", instructions: "Seleccione cada elemento del anuncio publicitario con su descripción correcta.", pairs: [ { term: "IMAGEN", definition: "Parte visual que sugiere una idea o comportamiento." }, { term: "ESLOGAN", definition: "Frase corta, atractiva y sorpresiva." }, { term: "TEXTO", definition: "Cuerpo que desarrolla el mensaje publicitario." }, ], },
+                },
+                {
+                    id: 4, title: "Las referencias bibliográficas (Normas Chicago)",
+                    content: [ { type: 'paragraph', text: 'Para elaborar un trabajo escrito, necesitamos consultar diversas fuentes. Todas estas fuentes deben quedar reflejadas a lo largo del trabajo.' }, { type: 'heading', level: 3, text: 'Citas y Notas a Pie de Página:' }, { type: 'paragraph', text: 'Las citas reproducen exactamente lo que se dice en una obra. Si son breves, van entre comillas. Si son largas, en párrafo aparte y con sangría.' }, { type: 'image', uri: require('./assets/images/normas_chicago_citas.png') }, ],
+                    activity: { type: "true_false", instructions: "Lee las siguientes afirmaciones sobre las normas Chicago y decide si son Verdaderas o Falsas.", questions: [ { text: "Las citas largas (más de 3 o 4 líneas) siempre se encierran entre comillas.", answer: false }, { text: "Si se omite una parte de una cita, se deben usar puntos suspensivos.", answer: true }, { text: "La abreviatura 'ibid.' se usa para citar la misma obra en una nota inmediatamente anterior.", answer: true }, ], },
+                },
+                {
+                    id: 5, title: "La crónica",
+                    content: [ { type: 'paragraph', text: 'La crónica es un texto periodístico a mitad de camino entre lo informativo y lo de opinión, donde el autor informa y valora un hecho.', style: { fontWeight: 'bold' } }, { type: 'image', uri: require('./assets/images/que_es_cronica.png') }, { type: 'heading', level: 3, text: 'Características:' }, { type: 'list', items: [{ text: 'Autor informa y opina.'}, { text: 'Temática variada.'}, { text: 'Estilo claro y rico.'}, { text: 'Responde a las 6 preguntas del periodismo.' }]}, { type: 'image', uri: require('./assets/images/caracteristicas_cronica.png') }, ],
+                    activity: { type: "mini_maze", instructions: "¡Ayuda al cronista a seguir el camino correcto!", nodes: [ { question: "Una crónica...", options: [{ text: "Solo presenta hechos objetivos.", correct: false }, { text: "Combina información y opinión.", correct: true }] }, { question: "Su temática es...", options: [{ text: "Limitada a la política.", correct: false }, { text: "Variada (deportes, cultura, etc.).", correct: true }] }, { question: "Su estructura es...", options: [{ text: "Siempre rígida.", correct: false }, { text: "Abierta y variable.", correct: true }] } ] },
+                },
+            ],
+            evaluation: [
+                { question: "¿Cuál de estos canales de comunicación abandonan más los jóvenes?", options: ["El teléfono fijo", "El correo electrónico y los mensajes SMS", "Las llamadas de voz"], correctAnswer: "El correo electrónico y los mensajes SMS" },
+                { question: "¿Con qué hito histórico se compara la revolución de Internet?", options: ["La invención de la imprenta", "La Revolución Industrial", "El descubrimiento de América"], correctAnswer: "La invención de la imprenta" },
+                { question: "¿Cuál es una ventaja clave de Internet?", options: ["Garantiza que toda la info es veraz.", "Acceso rápido a archivos.", "Limita la información para no abrumar."], correctAnswer: "Acceso rápido a archivos." },
+                { question: "El principal inconveniente de Internet es:", options: ["Su velocidad lenta.", "El exceso de información.", "Su alto costo."], correctAnswer: "El exceso de información." },
+                { question: "El objetivo principal de los textos publicitarios es:", options: ["Informar objetivamente.", "Persuadir al receptor.", "Entretener con historias."], correctAnswer: "Persuadir al receptor." },
+                { question: "En el modelo AIDA, la 'D' representa:", options: ["Decisión", "Dinero", "Deseo"], correctAnswer: "Deseo" },
+                { question: "La abreviatura 'ibid.' se usa cuando:", options: ["Se cita la misma obra en nota consecutiva.", "Hay más de tres autores.", "La fuente es desconocida."], correctAnswer: "Se cita la misma obra en nota consecutiva." },
+                { question: "Una cita textual breve debe ir...", options: ["En párrafo aparte.", "Entre comillas.", "Subrayada."], correctAnswer: "Entre comillas." },
+                { question: "Una crónica se diferencia de una noticia porque...", options: ["Es más corta.", "No tiene autor.", "Incluye la opinión del autor."], correctAnswer: "Incluye la opinión del autor." },
+                { question: "¿Cuál NO es una de las 6 preguntas del periodismo?", options: ["¿Qué?", "¿Quién?", "¿Cuánto?"], correctAnswer: "¿Cuánto?" },
+            ]
+        },
+        { // UNIDAD 2 - CONTENIDO AGREGADO
+            id: 2,
+            title: "Lengua e identidad",
+            topics: [
+                {
+                    id: 1, title: "Un visitante siniestro",
+                    content: [ { type: 'paragraph', text: 'A mí nunca se me ha dado bien esto de escribir...' }, { type: 'image', uri: require('./assets/images/visitante_siniestro1.png') }, { type: 'paragraph', text: 'Pero si callo y no cuento lo que me ha pasado en estas semanas, reviento... Todo comenzó la tarde del veintisiete de octubre...' }, { type: 'image', uri: require('./assets/images/visitante_siniestro2.png') }, { type: 'paragraph', text: 'Finalmente, el paciente revela su verdadera identidad: "...Me llamo Vlad Tepes... Aunque todos me conocen como el conde Drácula."', style: { fontWeight: 'bold' } }, ],
+                    activity: { type: "mini_maze", instructions: "Sigue la secuencia de la historia.", nodes: [ { question: "El doctor recibe una llamada de...", options: [{ text: "Un colega", correct: false }, { text: "Un paciente misterioso", correct: true }] }, { question: "El paciente pide ser atendido...", options: [{ text: "Al amanecer", correct: false }, { text: "Al anochecer", correct: true }] }, { question: "Al final, el paciente revela ser...", options: [{ text: "Un antiguo amigo", correct: false }, { text: "El Conde Drácula", correct: true }] } ] },
+                },
+                {
+                    id: 2, title: "La bibliografía (normas Chicago)",
+                    content: [ { type: 'paragraph', text: 'La bibliografía es una lista ordenada de las fuentes consultadas. Su finalidad es dar credibilidad y respetar la propiedad intelectual.', style: { fontWeight: 'bold' } }, { type: 'heading', level: 3, text: 'Datos Esenciales:' }, { type: 'list', items: [{ text: 'Nombre del autor' }, { text: 'Título de la obra' }, { text: 'Datos de la edición' }] }, { type: 'image', uri: require('./assets/images/bibliografia_chicago1.png') }, { type: 'heading', level: 3, text: 'Plagio y Paráfrasis' }, { type: 'paragraph', text: 'Plagio es tomar ideas de otro sin reconocerlo. Para evitarlo, se debe citar correctamente o parafrasear, siempre reconociendo la fuente original.' }, { type: 'image', uri: require('./assets/images/plagio_paraphrasis.png') }, ],
+                    activity: { type: "match_lines", instructions: "Une el concepto con su definición correcta.", pairs: [ { term: "BIBLIOGRAFÍA", definition: "Lista ordenada de fuentes." }, { term: "PLAGIO", definition: "Tomar ideas ajenas sin crédito." }, { term: "ET AL.", definition: "Se usa para más de tres autores." } ] },
+                },
+                {
+                    id: 3, title: "Comentario de textos",
+                    content: [ { type: 'paragraph', text: 'Comentar un texto consiste en analizar las ideas que expone (contenido) y averiguar cómo están expuestas (forma).', style: { fontWeight: 'bold' } }, { type: 'heading', level: 3, text: 'Fases del Comentario:' }, { type: 'list', items: [{ text: '1. Estudio del texto (Lectura, Contextualización).' }, { text: '2. Análisis (Forma, Contenido, Estructura).' }, { text: '3. Comentario crítico (Opinión personal).' }] }, { type: 'image', uri: require('./assets/images/comentario_textos2.png') }, ],
+                    activity: { type: "order_words", instructions: "Ordena los pasos para hacer un comentario de texto.", words: ["ESTUDIO", "ANÁLISIS", "CRÍTICA"] },
+                },
+                {
+                    id: 4, title: "El español de América",
+                    content: [ { type: 'paragraph', text: 'El español de América adopta características propias debido al contacto con lenguas indígenas.' }, { type: 'image', uri: require('./assets/images/mapa_espanol_america.png') }, { type: 'heading', level: 3, text: 'Rasgos Lingüísticos:' }, { type: 'list', items: [{ text: 'Seseo: Pronunciar c, z como /s/.' }, { text: 'Kichwismos: Préstamos del kichwa.' }] }, { type: 'image', uri: require('./assets/images/kichwismos.png') }, ],
+                    activity: { type: "complete_words", instructions: "Completa las palabras clave del tema.", questions: [{ word: "SESEO", hint: "S_SEO", missing: "E" }, { word: "KICHWISMO", hint: "KICH_ISMO", missing: "W" }, { word: "ARCAISMO", hint: "ARCA_SMO", missing: "I" }] },
+                },
+                {
+                    id: 5, title: "Identidad",
+                    content: [ { type: 'paragraph', text: 'La mitad de las 7,000 lenguas del mundo están en peligro de extinción. La diversidad lingüística es una parte crucial de la identidad cultural.' }, { type: 'image', uri: require('./assets/images/arbol_lenguas.png') }, ],
+                    activity: { type: "true_false", instructions: "Indica si la afirmación es verdadera o falsa.", questions: [ { text: "Todas las lenguas del mundo están seguras y no corren peligro.", answer: false }, { text: "La diversidad lingüística está amenazada.", answer: true } ] },
+                },
+            ],
+            evaluation: [
+                { question: "En 'Un visitante siniestro', ¿quién resulta ser el paciente misterioso?", options: ["Un colega del doctor", "El Conde Drácula", "Un detective privado"], correctAnswer: "El Conde Drácula" },
+                { question: "¿Qué es una bibliografía según las normas Chicago?", options: ["Un resumen del libro", "Una lista de fuentes consultadas", "Las opiniones del autor"], correctAnswer: "Una lista de fuentes consultadas" },
+                { question: "Al comentar un texto, la 'contextualización' se refiere a:", options: ["Corregir la ortografía", "Analizar la época y autor", "Dar una opinión final"], correctAnswer: "Analizar la época y autor" },
+                { question: "El 'seseo' es un rasgo fonético del español de América que consiste en:", options: ["No pronunciar la 's'", "Pronunciar 'c' y 'z' como 's'", "Usar 'vos' en vez de 'tú'"], correctAnswer: "Pronunciar 'c' y 'z' como 's'" },
+                { question: "¿Qué indica el texto sobre la diversidad lingüística en el mundo?", options: ["Está aumentando rápidamente", "Muchas lenguas están en peligro", "Todas las lenguas tienen el mismo número de hablantes"], correctAnswer: "Muchas lenguas están en peligro" },
+                { question: "El plagio es:", options: ["Citar correctamente a un autor", "Usar ideas ajenas sin dar crédito", "Hacer un resumen de un texto"], correctAnswer: "Usar ideas ajenas sin dar crédito" },
+                { question: "En el comentario de textos, ¿qué se analiza en la 'forma'?", options: ["Las ideas principales", "El tipo de discurso y recursos", "La biografía del autor"], correctAnswer: "El tipo de discurso y recursos" },
+                { question: "Un 'kichwismo' es:", options: ["Una norma gramatical del español", "Un tipo de comida andina", "Un préstamo léxico del kichwa"], correctAnswer: "Un préstamo léxico del kichwa" },
+                { question: "Según el texto, ¿cuántas lenguas aproximadamente hay en el mundo?", options: ["Unas 100", "Alrededor de 1,000", "Cerca de 7,000"], correctAnswer: "Cerca de 7,000" },
+                { question: "¿Qué es 'et al.' en una referencia bibliográfica?", options: ["Significa 'y el mismo lugar'", "Indica que hay más de tres autores", "Es el título de una revista"], correctAnswer: "Indica que hay más de tres autores" },
+            ]
+        },
+        { // UNIDAD 3
+            id: 3,
+            title: "La dialéctica de la lengua",
+            topics: [ { id: 1, title: "Un perro salvaje (Cómic) (Próximamente)", content: [{type: 'paragraph', text:'Contenido no disponible.'}], activity:{type:'placeholder'} }, { id: 2, title: "El cómic (Próximamente)", content: [{type: 'paragraph', text:'Contenido no disponible.'}], activity:{type:'placeholder'} }, { id: 3, title: "Elaboración de un trabajo monográfico (Próximamente)", content: [{type: 'paragraph', text:'Contenido no disponible.'}], activity:{type:'placeholder'} }, { id: 4, title: "Elementos paralingüísticos: la entonación (Próximamente)", content: [{type: 'paragraph', text:'Contenido no disponible.'}], activity:{type:'placeholder'} }, { id: 5, title: "Fenómeno de las lenguas en contacto (Próximamente)", content: [{type: 'paragraph', text:'Contenido no disponible.'}], activity:{type:'placeholder'} }, ],
+            evaluation: []
+        },
+    ],
+};
+
+// --- Componentes de Pantalla ---
+
+const HomeScreen = () => { const { navigateTo } = useContext(AppContext); return ( <View style={styles.screenContainer}><Text style={styles.homeTitle}>Lenguaje y Literatura: Lengua Viva y Letra y Activa</Text><View style={styles.homeIconContainer}><Text style={styles.homeIcon}>📚✍️</Text></View><Text style={styles.homeSlogan}>Explora, aprende y domina el arte de comunicar. Dirigido a los estudiantes de Primero de Bachillerato.</Text><View style={styles.homeButtonContainer}><TouchableOpacity onPress={() => navigateTo('content', 1, 1)} style={styles.homeButtonPrimary}><Text style={styles.buttonText}>Empezar</Text></TouchableOpacity><TouchableOpacity onPress={() => navigateTo('units')} style={styles.homeButtonSecondary}><Text style={styles.buttonText}>Unidades</Text></TouchableOpacity><TouchableOpacity onPress={() => navigateTo('credits')} style={styles.homeButtonTertiary}><Text style={styles.buttonText}>Créditos</Text></TouchableOpacity></View></View> ); };
+const UnitsScreen = () => { const { navigateTo, userProgress } = useContext(AppContext); return ( <View style={styles.screenContainer}><View style={styles.backButtonContainer}><TouchableOpacity onPress={() => navigateTo('home')} style={styles.backButton}><Text style={styles.backButtonText}>{"< Volver"}</Text></TouchableOpacity></View><Text style={styles.screenTitle}>Selecciona una Unidad</Text><ScrollView style={styles.unitListContainerScrollView}><View style={styles.unitListContainer}>{appData.units.map(unit => (<TouchableOpacity key={unit.id} onPress={() => navigateTo('topics', unit.id)} style={styles.unitCard}><View><Text style={styles.unitCardTitle}>Unidad {unit.id}: {unit.title}</Text>{userProgress.units[unit.id]?.evaluationPassed && <Text style={styles.unitCardCompleted}>✅ Completada</Text>}</View><Text style={styles.unitCardArrow}>›</Text></TouchableOpacity>))}</View></ScrollView></View> ); };
+const TopicsScreen = () => { const { navigateTo, currentUnit, userProgress } = useContext(AppContext); const unit = appData.units.find(u => u.id === currentUnit); if (!unit) return <Text style={styles.errorText}>Unidad no encontrada.</Text>; const allTopicsCompleted = unit.topics.every(topic => userProgress.units[unit.id]?.completedTopics.includes(topic.id)); return ( <View style={styles.screenContainer}><View style={styles.headerContainer}><TouchableOpacity onPress={() => navigateTo('units')} style={styles.backButton}><Text style={styles.backButtonText}>{"< Volver"}</Text></TouchableOpacity><Text style={styles.headerTitle}>Unidad {unit.id}: {unit.title}</Text></View><ScrollView style={styles.topicListContainerScrollView}><View style={styles.topicListContainer}>{unit.topics.map(topic => (<TouchableOpacity key={topic.id} onPress={() => navigateTo('content', unit.id, topic.id)} style={styles.topicCard}><View style={styles.topicCardContent}>{userProgress.units[unit.id]?.completedTopics.includes(topic.id) ? (<Text style={styles.topicCompletedIcon}>✅</Text>) : (<View style={styles.topicPendingIcon}></View>)}<Text style={styles.topicCardTitle}>{topic.title}</Text></View><Text style={styles.topicCardArrow}>›</Text></TouchableOpacity>))}<TouchableOpacity onPress={() => navigateTo('evaluation', unit.id)} disabled={!allTopicsCompleted} style={[styles.evaluationButton, !allTopicsCompleted && styles.evaluationButtonDisabled]}><Text style={styles.buttonText}>Ir a Evaluación de la Unidad</Text></TouchableOpacity></View></ScrollView></View> ); };
+const ContentScreen = () => { const { navigateTo, currentUnit, currentTopic } = useContext(AppContext); const unit = appData.units.find(u => u.id === currentUnit); const topic = unit?.topics.find(t => t.id === currentTopic); if (!unit || !topic) return <Text style={styles.errorText}>Contenido no encontrado.</Text>; const renderContent = (contentArray) => contentArray.map((block, index) => { switch (block.type) { case 'paragraph': return <Text key={index} style={[styles.paragraph, block.style]}>{block.text}</Text>; case 'image': return <Image key={index} source={block.uri} style={styles.contentImage} resizeMode="contain" />; case 'heading': return <Text key={index} style={styles[`heading${block.level}`] || styles.heading3}>{block.text}</Text>; case 'list': return <View key={index} style={styles.listContainer}>{block.items.map((item, i) => <Text key={i} style={[styles.listItem, item.style]}>• {item.text}</Text>)}</View>; default: return null; } }); return ( <View style={styles.screenContainer}><View style={styles.headerContainer}><TouchableOpacity onPress={() => navigateTo('topics', unit.id)} style={styles.backButton}><Text style={styles.backButtonText}>{"< Volver"}</Text></TouchableOpacity><Text style={styles.headerTitleContentScreen} numberOfLines={1}>{topic.title.replace('(Próximamente)','')}</Text></View><ScrollView style={styles.contentScrollView}>{topic.video && (<View style={styles.videoContainer}><Video source={topic.video} style={styles.videoPlayer} controls={true} resizeMode="contain" /></View>)}{renderContent(topic.content)}</ScrollView>{topic.activity.type !== 'placeholder' && (<View style={styles.activityButtonContainer}><TouchableOpacity onPress={() => navigateTo('activity', unit.id, topic.id)} style={styles.activityButton}><Text style={styles.buttonText}>Continuar a la Actividad</Text></TouchableOpacity></View>)}</View> ); };
+
+// --- Pantalla de Actividad con Lógica Funcional Restaurada y Nueva ---
+const ActivityScreen = () => {
+    const { navigateTo, currentUnit, currentTopic, markTopicCompleted } = useContext(AppContext);
+    const unit = appData.units.find(u => u.id === currentUnit);
+    const topic = unit?.topics.find(t => t.id === currentTopic);
+    const [activityCompleted, setActivityCompleted] = useState(false);
+
+    useEffect(() => { setActivityCompleted(false); }, [currentTopic]);
+
+    if (!unit || !topic || !topic.activity) return <Text style={styles.errorText}>Actividad no encontrada.</Text>;
+
+    const handleActivityComplete = () => {
+        setActivityCompleted(true);
+        markTopicCompleted(unit.id, topic.id);
+        Alert.alert("¡Actividad Completada!", "¡Bien hecho!");
+    };
+    
+    const nextTopic = unit.topics.find(t => t.id === topic.id + 1);
+
+    const renderActivityComponent = () => {
+        switch (topic.activity.type) {
+            case "complete_words": return <CompleteWordsActivity activity={topic.activity} onComplete={handleActivityComplete} />;
+            case "true_false": return <TrueFalseActivity activity={topic.activity} onComplete={handleActivityComplete} />;
+            case "match_lines": return <MatchLinesActivity activity={topic.activity} onComplete={handleActivityComplete} />;
+            case "mini_maze": return <MiniMazeActivity activity={topic.activity} onComplete={handleActivityComplete} />;
+            case "order_words": return <OrderWordsActivity activity={topic.activity} onComplete={handleActivityComplete} />;
+            case "placeholder": return <Text style={styles.placeholderText}>Actividad no disponible.</Text>;
+            default: return <Text style={styles.errorText}>Tipo de actividad no reconocido: {topic.activity.type}</Text>;
+        }
+    };
+
+    return (
+        <View style={styles.screenContainer}>
+            <View style={styles.headerContainer}><TouchableOpacity onPress={() => navigateTo('content', unit.id, topic.id)} style={styles.backButton}><Text style={styles.backButtonText}>{"< Volver"}</Text></TouchableOpacity><Text style={styles.headerTitle}>Actividad: {topic.title}</Text></View>
+            <View style={styles.activityMainContainer}>
+                {!activityCompleted ? renderActivityComponent() : (
+                    <View style={styles.activityCompletedContainer}>
+                        <Text style={styles.activityCompletedMessage}>✅ ¡Actividad Completada!</Text>
+                        <View style={styles.activityCompletedButtonContainer}>
+                            {nextTopic && <TouchableOpacity onPress={() => navigateTo('content', unit.id, nextTopic.id)} style={styles.activityCompletedNextButton}><Text style={styles.buttonText}>Siguiente Tema</Text></TouchableOpacity>}
+                            <TouchableOpacity onPress={() => navigateTo('topics', unit.id)} style={styles.activityCompletedReturnButton}><Text style={styles.buttonText}>Volver a Temas</Text></TouchableOpacity>
+                        </View>
+                    </View>
+                )}
+            </View>
+        </View>
+    );
+};
+
+// --- Componentes Específicos de Actividades (Lógica Funcional Restaurada y Nueva) ---
+const CompleteWordsActivity = ({ activity, onComplete }) => { const [currentQIndex, setCurrentQIndex] = useState(0); const [inputValue, setInputValue] = useState(''); const [feedback, setFeedback] = useState(''); const currentQuestion = activity.questions[currentQIndex]; const handleSubmit = () => { if (inputValue.toUpperCase() === currentQuestion.missing) { setFeedback('¡Correcto!'); if (currentQIndex < activity.questions.length - 1) { setTimeout(() => { setCurrentQIndex(prev => prev + 1); setInputValue(''); setFeedback(''); }, 800); } else { setTimeout(onComplete, 800); } } else { setFeedback('Incorrecto. Intenta de nuevo.'); } }; return (<View style={styles.activityContentContainer}><Text style={styles.activityInstructions}>{activity.instructions}</Text><View style={styles.completeWordsCard}><Text style={styles.completeWordsHint}>{currentQuestion.hint}</Text><TextInput style={styles.completeWordsInput} value={inputValue} onChangeText={setInputValue} maxLength={currentQuestion.missing.length} placeholder="?" autoCapitalize="characters" /><TouchableOpacity onPress={handleSubmit} style={styles.activitySubmitButton}><Text style={styles.buttonText}>Verificar</Text></TouchableOpacity>{feedback ? <Text style={[styles.activityFeedback, feedback === '¡Correcto!' && styles.activityFeedbackCorrect]}>{feedback}</Text> : null}</View></View>); };
+const TrueFalseActivity = ({ activity, onComplete }) => { const [currentQIndex, setCurrentQIndex] = useState(0); const [feedback, setFeedback] = useState(''); const currentQuestion = activity.questions[currentQIndex]; const handleAnswer = (answer) => { if (answer === currentQuestion.answer) { setFeedback('¡Correcto!'); if (currentQIndex < activity.questions.length - 1) { setTimeout(() => { setCurrentQIndex(prev => prev + 1); setFeedback(''); }, 800); } else { setTimeout(onComplete, 800); } } else { setFeedback('Incorrecto. Intenta de nuevo.'); } }; return (<View style={styles.activityContentContainer}><Text style={styles.activityInstructions}>{activity.instructions}</Text><View style={styles.trueFalseCard}><Text style={styles.trueFalseQuestion}>"{currentQuestion.text}"</Text><View style={styles.trueFalseButtonContainer}><TouchableOpacity onPress={() => handleAnswer(true)} style={styles.trueFalseButton}><Text style={styles.activityButtonDarkText}>Verdadero</Text></TouchableOpacity><TouchableOpacity onPress={() => handleAnswer(false)} style={styles.trueFalseButton}><Text style={styles.activityButtonDarkText}>Falso</Text></TouchableOpacity></View>{feedback ? <Text style={[styles.activityFeedback, feedback === '¡Correcto!' && styles.activityFeedbackCorrect]}>{feedback}</Text> : null}</View></View>); };
+const MatchLinesActivity = ({ activity, onComplete }) => { const [leftSelected, setLeftSelected] = useState(null); const [rightSelected, setRightSelected] = useState(null); const [matchedPairs, setMatchedPairs] = useState([]); const [shuffledRight, setShuffledRight] = useState([]); useEffect(() => { setShuffledRight([...activity.pairs].sort(() => Math.random() - 0.5)); }, []); const checkMatch = (term, definition) => { const correctPair = activity.pairs.find(p => p.term === term && p.definition === definition); if (correctPair) { const newMatched = [...matchedPairs, correctPair]; setMatchedPairs(newMatched); if (newMatched.length === activity.pairs.length) { setTimeout(onComplete, 500); } } setLeftSelected(null); setRightSelected(null); }; const handleLeftClick = (term) => { setLeftSelected(term); if (rightSelected) checkMatch(term, rightSelected); }; const handleRightClick = (def) => { setRightSelected(def); if (leftSelected) checkMatch(leftSelected, def); }; return (<View style={styles.activityContentContainer}><Text style={styles.activityInstructions}>{activity.instructions}</Text><View style={styles.matchLinesContainer}><View style={styles.matchLinesColumn}>{activity.pairs.map(p => <TouchableOpacity key={p.term} onPress={() => handleLeftClick(p.term)} disabled={matchedPairs.some(mp => mp.term === p.term)} style={[styles.matchLinesButton, leftSelected === p.term && styles.matchLinesButtonSelected, matchedPairs.some(mp => mp.term === p.term) && styles.matchLinesButtonMatched]}><Text style={styles.matchLinesButtonText}>{p.term}</Text></TouchableOpacity>)}</View><View style={styles.matchLinesColumn}>{shuffledRight.map(p => <TouchableOpacity key={p.definition} onPress={() => handleRightClick(p.definition)} disabled={matchedPairs.some(mp => mp.definition === p.definition)} style={[styles.matchLinesButton, rightSelected === p.definition && styles.matchLinesButtonSelected, matchedPairs.some(mp => mp.definition === p.definition) && styles.matchLinesButtonMatched]}><Text style={styles.matchLinesButtonText}>{p.definition}</Text></TouchableOpacity>)}</View></View></View>); };
+const MiniMazeActivity = ({ activity, onComplete }) => { const [currentNodeIndex, setCurrentNodeIndex] = useState(0); const [feedback, setFeedback] = useState(''); const currentNode = activity.nodes[currentNodeIndex]; const handleOptionClick = (correct) => { if (correct) { setFeedback('¡Correcto!'); if (currentNodeIndex < activity.nodes.length - 1) { setTimeout(() => { setCurrentNodeIndex(prev => prev + 1); setFeedback(''); }, 800); } else { setTimeout(onComplete, 800); } } else { setFeedback('Incorrecto. Intenta de nuevo.'); } }; return (<View style={styles.activityContentContainer}><Text style={styles.activityInstructions}>{activity.instructions}</Text><View style={styles.miniMazeCard}><Text style={styles.miniMazeQuestion}>{currentNode.question}</Text><View style={styles.miniMazeOptionContainer}>{currentNode.options.map((opt, i) => <TouchableOpacity key={i} onPress={() => handleOptionClick(opt.correct)} style={styles.miniMazeOptionButton}><Text style={styles.buttonText}>{opt.text}</Text></TouchableOpacity>)}</View>{feedback ? <Text style={[styles.activityFeedback, feedback === '¡Correcto!' && styles.activityFeedbackCorrect]}>{feedback}</Text> : null}</View></View>); };
+
+const OrderWordsActivity = ({ activity, onComplete }) => {
+    const [currentWordIndex, setCurrentWordIndex] = useState(0);
+    const [shuffledLetters, setShuffledLetters] = useState([]);
+    const [builtWord, setBuiltWord] = useState([]);
+    const [feedback, setFeedback] = useState('');
+    const targetWord = activity.words[currentWordIndex];
+
+    useEffect(() => {
+        setShuffledLetters(targetWord.split('').sort(() => Math.random() - 0.5));
+        setBuiltWord([]);
+    }, [currentWordIndex, targetWord]);
+
+    const handleSelectLetter = (letter, index) => {
+        setBuiltWord([...builtWord, letter]);
+        const newShuffled = [...shuffledLetters];
+        newShuffled.splice(index, 1);
+        setShuffledLetters(newShuffled);
+    };
+
+    const handleReset = () => {
+        setShuffledLetters(targetWord.split('').sort(() => Math.random() - 0.5));
+        setBuiltWord([]);
+        setFeedback('');
+    };
+
+    const checkWord = () => {
+        if (builtWord.join('') === targetWord) {
+            setFeedback('¡Correcto!');
+            if (currentWordIndex < activity.words.length - 1) {
+                setTimeout(() => setCurrentWordIndex(prev => prev + 1), 1000);
+            } else {
+                setTimeout(onComplete, 1000);
+            }
+        } else {
+            setFeedback('Incorrecto. ¡Intenta de nuevo!');
+            setTimeout(handleReset, 1000);
+        }
+    };
+    
+    return (
+        <View style={styles.activityContentContainer}>
+            <Text style={styles.activityInstructions}>{activity.instructions}</Text>
+            <View style={styles.orderWordsCard}>
+                <View style={styles.orderedLettersContainer}><Text style={styles.orderedLettersText}>{builtWord.join('') || '...'}</Text></View>
+                <View style={styles.shuffledLettersContainer}>
+                    {shuffledLetters.map((letter, index) => (
+                        <TouchableOpacity key={`${letter}-${index}`} style={styles.letterButton} onPress={() => handleSelectLetter(letter, index)}><Text style={styles.letterButtonText}>{letter}</Text></TouchableOpacity>
+                    ))}
+                </View>
+                <View style={{ flexDirection: 'row', marginTop: 20 }}>
+                    <TouchableOpacity onPress={checkWord} style={[styles.activitySubmitButton, { marginRight: 10 }]}><Text style={styles.buttonText}>Verificar</Text></TouchableOpacity>
+                    <TouchableOpacity onPress={handleReset} style={[styles.activitySubmitButton, { backgroundColor: '#f59e0b' }]}><Text style={styles.buttonText}>Resetear</Text></TouchableOpacity>
+                </View>
+                {feedback ? <Text style={[styles.activityFeedback, feedback === '¡Correcto!' && styles.activityFeedbackCorrect]}>{feedback}</Text> : null}
+            </View>
+        </View>
+    );
+};
+
+const EvaluationScreen = ({}) => { const { navigateTo, currentUnit, setEvaluationScore } = useContext(AppContext); const unit = appData.units.find(u => u.id === currentUnit); const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0); const [selectedAnswer, setSelectedAnswer] = useState(null); const [answers, setAnswers] = useState([]); useEffect(() => { setAnswers([]); setCurrentQuestionIndex(0); setSelectedAnswer(null); }, [currentUnit]); if (!unit || !unit.evaluation || unit.evaluation.length === 0) return <Text style={styles.errorText}>Evaluación no disponible.</Text>; const currentQuestion = unit.evaluation[currentQuestionIndex]; const handleNextQuestion = () => { const newAnswers = [...answers, selectedAnswer]; setAnswers(newAnswers); if (currentQuestionIndex < unit.evaluation.length - 1) { setCurrentQuestionIndex(prev => prev + 1); setSelectedAnswer(null); } else { let finalScore = 0; newAnswers.forEach((ans, index) => { if(ans === unit.evaluation[index].correctAnswer) finalScore++; }); setEvaluationScore(finalScore); navigateTo('results', unit.id); } }; return ( <View style={styles.screenContainer}><Text style={styles.evaluationTitle}>Evaluación Unidad {unit.id}</Text><Text style={styles.evaluationProgress}>Pregunta {currentQuestionIndex + 1}/{unit.evaluation.length}</Text><View style={styles.evaluationCard}><Text style={styles.evaluationQuestion}>{currentQuestion.question}</Text><View style={styles.evaluationOptionsContainer}>{currentQuestion.options.map((option, index) => (<TouchableOpacity key={index} onPress={() => setSelectedAnswer(option)} style={[styles.evaluationOptionButton, selectedAnswer === option && styles.evaluationOptionButtonSelected]}><Text style={styles.evaluationOptionText}>{option}</Text></TouchableOpacity>))}</View><TouchableOpacity onPress={handleNextQuestion} disabled={selectedAnswer === null} style={[styles.evaluationNextButton, selectedAnswer === null && styles.evaluationNextButtonDisabled]}><Text style={styles.buttonText}>{currentQuestionIndex === unit.evaluation.length - 1 ? 'Finalizar' : 'Siguiente'}</Text></TouchableOpacity></View></View> ); };
+const ResultsScreen = () => { const { navigateTo, currentUnit, evaluationScore, markUnitEvaluationPassed } = useContext(AppContext); const unit = appData.units.find(u => u.id === currentUnit); const requiredScore = 7; const passed = evaluationScore >= requiredScore; useEffect(() => { if (unit) { markUnitEvaluationPassed(unit.id, passed); } }, [unit, passed, markUnitEvaluationPassed]); return ( <View style={styles.screenContainer}><Text style={styles.resultsTitle}>Resultado de Evaluación</Text><View style={[styles.resultsCard, passed ? styles.resultsCardPassed : styles.resultsCardFailed]}><Text style={styles.resultsEmoji}>{passed ? '🎉' : '😔'}</Text><Text style={passed ? styles.resultsMessagePassed : styles.resultsMessageFailed}>{passed ? `¡FELICIDADES! Unidad ${unit.id} Aprobada!` : `Sigue intentándolo. Unidad ${unit.id} Pendiente`}</Text><Text style={styles.resultsScore}>Obtuviste <Text style={styles.resultsScoreHighlight}>{evaluationScore}/{unit.evaluation.length}</Text> correctas.</Text><View style={styles.resultsButtonContainer}>{passed ? ( <> {currentUnit < appData.units.length && <TouchableOpacity onPress={() => navigateTo('topics', currentUnit + 1)} style={styles.resultsButtonPrimary}><Text style={styles.buttonText}>Siguiente Unidad</Text></TouchableOpacity>} <TouchableOpacity onPress={() => navigateTo('home')} style={styles.resultsButtonSecondary}><Text style={styles.buttonText}>Volver al Menú</Text></TouchableOpacity> </> ) : ( <> <TouchableOpacity onPress={() => navigateTo('evaluation', currentUnit)} style={styles.resultsButtonFailedPrimary}><Text style={styles.buttonText}>Reintentar</Text></TouchableOpacity> <TouchableOpacity onPress={() => navigateTo('topics', currentUnit)} style={styles.resultsButtonFailedSecondary}><Text style={styles.buttonText}>Repasar Unidad</Text></TouchableOpacity> </> )}</View></View></View> ); };
+const CreditsScreen = () => { const { navigateTo } = useContext(AppContext); return ( <View style={styles.screenContainer}><View style={styles.backButtonContainer}><TouchableOpacity onPress={() => navigateTo('home')} style={styles.backButton}><Text style={styles.backButtonText}>{"< Volver"}</Text></TouchableOpacity></View><Text style={styles.screenTitle}>Créditos</Text><View style={styles.creditsCard}><Text style={styles.creditsText}>Creadoras:</Text><Text style={styles.creditsName}>Shirley Castillo</Text><Text style={styles.creditsName}>Genesis Intriago</Text></View></View> ); };
+
+// Componente principal de la aplicación
+const App = () => {
+    const { currentScreen } = useContext(AppContext);
+    const renderScreen = () => {
+        switch (currentScreen) {
+            case 'home': return <HomeScreen />;
+            case 'units': return <UnitsScreen />;
+            case 'topics': return <TopicsScreen />;
+            case 'content': return <ContentScreen />;
+            case 'activity': return <ActivityScreen />;
+            case 'evaluation': return <EvaluationScreen />;
+            case 'results': return <ResultsScreen />;
+            case 'credits': return <CreditsScreen />;
+            default: return <HomeScreen />;
+        }
+    };
+    return (<View style={styles.appContainer}>{renderScreen()}</View>);
+};
+
+const styles = StyleSheet.create({
+    appContainer: { flex: 1, backgroundColor: '#f8fafc' },
+    screenContainer: { flex: 1, alignItems: 'center', justifyContent: 'flex-start', padding: 16, backgroundColor: '#e0f2f7', paddingTop: 60 },
+    homeTitle: { fontSize: 32, fontWeight: 'bold', color: '#1e40af', marginBottom: 24, textAlign: 'center' },
+    homeIconContainer: { marginBottom: 24, padding: 16, backgroundColor: 'white', borderRadius: 999, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 5 },
+    homeIcon: { fontSize: 80 },
+    homeSlogan: { fontSize: 16, color: '#4b5563', marginBottom: 32, textAlign: 'center', maxWidth: 280 },
+    homeButtonContainer: { width: '100%', maxWidth: 220, gap: 16 },
+    homeButtonPrimary: { backgroundColor: '#2563eb', paddingVertical: 12, borderRadius: 8, elevation: 3 },
+    homeButtonSecondary: { backgroundColor: '#10b981', paddingVertical: 12, borderRadius: 8, elevation: 3 },
+    homeButtonTertiary: { backgroundColor: '#4b5563', paddingVertical: 12, borderRadius: 8, elevation: 3 },
+    buttonText: { color: 'white', fontWeight: 'bold', textAlign: 'center', fontSize: 16 },
+    backButtonContainer: { position: 'absolute', top: 40, left: 16, zIndex: 10 },
+    backButton: { padding: 8 },
+    backButtonText: { color: '#2563eb', fontWeight: '600', fontSize: 18 },
+    screenTitle: { fontSize: 28, fontWeight: 'bold', color: '#1e40af', marginBottom: 24, textAlign: 'center' },
+    unitListContainerScrollView: { width: '100%' },
+    unitListContainer: { width: '100%', maxWidth: 320, paddingBottom: 20, alignSelf: 'center' },
+    unitCard: { backgroundColor: 'white', borderWidth: 1, borderColor: '#bfdbfe', borderRadius: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3, padding: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+    unitCardTitle: { fontSize: 18, fontWeight: '600', color: '#374151' },
+    unitCardCompleted: { fontSize: 12, color: '#16a34a', fontWeight: 'bold', marginTop: 4 },
+    unitCardArrow: { fontSize: 24, color: '#9ca3af' },
+    headerContainer: { width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 16, paddingTop: 40, position: 'relative' },
+    headerTitle: { fontSize: 20, fontWeight: 'bold', color: '#1e40af', textAlign: 'center', flex: 1 },
+    headerTitleContentScreen: { fontSize: 18, fontWeight: 'bold', color: '#1e40af', textAlign: 'center', flex: 1, marginHorizontal: 40 },
+    topicListContainerScrollView: { width: '100%' },
+    topicListContainer: { width: '100%', maxWidth: 320, paddingBottom: 20, alignSelf: 'center' },
+    topicCard: { backgroundColor: 'white', borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 8, shadowOpacity: 0.05, padding: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
+    topicCardContent: { flexDirection: 'row', alignItems: 'center', flex: 1 },
+    topicCompletedIcon: { fontSize: 18, color: '#10b981', marginRight: 12 },
+    topicPendingIcon: { width: 18, height: 18, borderRadius: 9, borderWidth: 2, borderColor: '#9ca3af', marginRight: 12 },
+    topicCardTitle: { fontSize: 15, fontWeight: '600', color: '#374151', flexShrink: 1 },
+    topicCardArrow: { fontSize: 20, color: '#9ca3af' },
+    evaluationButton: { backgroundColor: '#7c3aed', paddingVertical: 12, borderRadius: 8, elevation: 3, marginTop: 16 },
+    evaluationButtonDisabled: { backgroundColor: '#a78bfa' },
+    contentScrollView: { flex: 1, backgroundColor: 'white', borderRadius: 8, padding: 16, marginBottom: 16, width:'100%', maxWidth: '100%' },
+    paragraph: { fontSize: 16, color: '#4b5563', marginBottom: 16, lineHeight: 24 },
+    contentImage: { width: '100%', height: 180, borderRadius: 8, marginBottom: 16, alignSelf: 'center' },
+    heading3: { fontSize: 20, fontWeight: 'bold', color: '#374151', marginBottom: 10, marginTop: 10, borderBottomWidth: 1, borderBottomColor: '#d1d5db', paddingBottom: 4 },
+    listContainer: { marginBottom: 16, paddingLeft: 10 },
+    listItem: { fontSize: 16, color: '#4b5563', marginBottom: 6, lineHeight: 22 },
+    videoContainer: { width: '100%', height: 200, backgroundColor: '#000', borderRadius: 8, marginBottom: 16, overflow: 'hidden' },
+    videoPlayer: { width: '100%', height: '100%' },
+    activityButtonContainer: { width: '100%', paddingHorizontal: 16, paddingBottom: 16 },
+    activityButton: { width: '100%', backgroundColor: '#7c3aed', paddingVertical: 12, borderRadius: 8, elevation: 3 },
+    activityMainContainer: { flex: 1, justifyContent: 'center', padding: 16, width: '100%' },
+    activityContentContainer: { alignItems: 'center', width: '100%', backgroundColor: 'white', padding: 20, borderRadius: 12, shadowOpacity: 0.1, shadowRadius: 10, elevation: 5 },
+    activityInstructions: { fontSize: 18, color: '#374151', marginBottom: 20, textAlign: 'center', fontWeight: '500' },
+    activitySubmitButton: { backgroundColor: '#10b981', paddingVertical: 10, paddingHorizontal: 20, borderRadius: 8, marginTop: 20 },
+    activityFeedback: { marginTop: 12, color: '#dc2626', fontWeight: '600', fontSize: 16 },
+    activityFeedbackCorrect: { color: '#16a34a' },
+    activityCompletedContainer: { alignItems: 'center', justifyContent: 'center', padding: 24 },
+    activityCompletedMessage: { fontSize: 24, fontWeight: 'bold', color: '#16a34a', marginBottom: 24, textAlign: 'center' },
+    activityCompletedButtonContainer: { gap: 16, width: '100%', alignItems: 'center' },
+    activityCompletedNextButton: { backgroundColor: '#2563eb', paddingVertical: 12, borderRadius: 8, width: 220 },
+    activityCompletedReturnButton: { backgroundColor: '#4b5563', paddingVertical: 12, borderRadius: 8, width: 220 },
+    errorText: { fontSize: 18, color: '#dc2626', textAlign: 'center', padding: 20 },
+    evaluationTitle: { fontSize: 24, fontWeight: 'bold', color: '#6b21a8', marginBottom: 16, textAlign: 'center', paddingTop: 20 },
+    evaluationProgress: { fontSize: 16, color: '#4b5563', marginBottom: 20, textAlign: 'center' },
+    evaluationCard: { backgroundColor: 'white', borderRadius: 12, shadowOpacity: 0.1, elevation: 5, padding: 20, marginBottom: 24, width: '100%' },
+    evaluationQuestion: { fontSize: 18, fontWeight: '600', color: '#374151', marginBottom: 24, textAlign: 'center' },
+    evaluationOptionsContainer: { gap: 12, width: '100%' },
+    evaluationOptionButton: { paddingVertical: 12, paddingHorizontal: 16, borderRadius: 8, backgroundColor: '#f3f4f6', borderWidth: 1, borderColor: '#d1d5db', alignItems: 'flex-start' },
+    evaluationOptionButtonSelected: { borderColor: '#7c3aed', borderWidth: 2, backgroundColor: '#e9d5ff' },
+    evaluationOptionText: { fontSize: 16, fontWeight: '500', color: '#374151' },
+    evaluationNextButton: { marginTop: 24, width: '100%', paddingVertical: 12, borderRadius: 8, backgroundColor: '#10b981' },
+    evaluationNextButtonDisabled: { backgroundColor: '#a1a1aa' },
+    resultsTitle: { fontSize: 28, fontWeight: 'bold', color: '#c2410c', marginBottom: 24, textAlign: 'center', paddingTop: 20 },
+    resultsCard: { backgroundColor: 'white', borderRadius: 12, shadowOpacity: 0.1, elevation: 5, padding: 32, width: '100%', maxWidth: 320, alignItems: 'center' },
+    resultsCardPassed: { borderColor: '#22c55e', borderWidth: 3 },
+    resultsCardFailed: { borderColor: '#dc2626', borderWidth: 3 },
+    resultsEmoji: { fontSize: 48, marginBottom: 16 },
+    resultsMessagePassed: { fontSize: 20, fontWeight: 'bold', color: '#16a34a', marginBottom: 16, textAlign: 'center' },
+    resultsMessageFailed: { fontSize: 20, fontWeight: 'bold', color: '#dc2626', marginBottom: 8, textAlign: 'center' },
+    resultsUnitPending: { fontSize: 16, color: '#4b5563', marginBottom: 24, textAlign: 'center' },
+    resultsScore: { fontSize: 16, color: '#374151', marginBottom: 32, textAlign: 'center' },
+    resultsScoreHighlight: { fontSize: 20, fontWeight: 'bold' },
+    resultsButtonContainer: { gap: 12, width: '100%', alignItems: 'center' },
+    resultsButtonPrimary: { backgroundColor: '#2563eb', paddingVertical: 12, borderRadius: 8, width: 220 },
+    resultsButtonSecondary: { backgroundColor: '#4b5563', paddingVertical: 12, borderRadius: 8, width: 220 },
+    resultsButtonFailedPrimary: { backgroundColor: '#dc2626', paddingVertical: 12, borderRadius: 8, width: 220 },
+    resultsButtonFailedSecondary: { backgroundColor: '#d97706', paddingVertical: 12, borderRadius: 8, width: 220 },
+    creditsCard: { backgroundColor: 'white', borderRadius: 12, shadowOpacity: 0.1, elevation: 5, padding: 32, width: '100%', maxWidth: 280, alignItems: 'center' },
+    creditsText: { fontSize: 18, color: '#4b5563', marginBottom: 16 },
+    creditsName: { fontSize: 24, fontWeight: 'bold', color: '#2563eb', marginBottom: 8 },
+
+    // Nuevos estilos para actividades
+    completeWordsCard: { backgroundColor: '#e0f2fe', padding: 24, borderRadius: 8, width: '100%', alignItems: 'center' },
+    completeWordsHint: { fontSize: 24, fontWeight: 'bold', color: '#0c4a6e', marginBottom: 16, letterSpacing: 2 },
+    completeWordsInput: { width: '80%', padding: 12, borderWidth: 2, borderColor: '#7dd3fc', borderRadius: 8, textAlign: 'center', fontSize: 18, textTransform: 'uppercase', marginBottom: 16, backgroundColor: 'white' },
+    trueFalseCard: { backgroundColor: '#e0f2fe', padding: 24, borderRadius: 8, width: '100%', alignItems: 'center' },
+    trueFalseQuestion: { fontSize: 18, fontWeight: '600', color: '#0c4a6e', marginBottom: 16, textAlign: 'center' },
+    trueFalseButtonContainer: { flexDirection: 'row', justifyContent: 'space-around', width: '100%' },
+    trueFalseButton: { paddingVertical: 10, paddingHorizontal: 20, borderRadius: 8, backgroundColor: 'white', borderWidth: 1, borderColor: '#7dd3fc' },
+    activityButtonDarkText: { color: '#0c4a6e', fontWeight: 'bold' },
+    matchLinesContainer: { flexDirection: 'row', justifyContent: 'space-around', width: '100%', marginTop: 10 },
+    matchLinesColumn: { gap: 12, width: '48%' },
+    matchLinesButton: { padding: 12, borderRadius: 8, borderWidth: 1, borderColor: '#7dd3fc', backgroundColor: 'white', alignItems: 'center' },
+    matchLinesButtonText: { fontSize: 14, fontWeight: '500', color: '#075985', textAlign: 'center' },
+    matchLinesButtonSelected: { backgroundColor: '#bae6fd', borderColor: '#0ea5e9' },
+    matchLinesButtonMatched: { backgroundColor: '#dcfce7', borderColor: '#22c55e' },
+    miniMazeCard: { backgroundColor: '#e0f2fe', padding: 24, borderRadius: 8, width: '100%', alignItems: 'center' },
+    miniMazeQuestion: { fontSize: 18, fontWeight: '600', color: '#0c4a6e', marginBottom: 16, textAlign: 'center' },
+    miniMazeOptionContainer: { gap: 12, width: '100%' },
+    miniMazeOptionButton: { paddingVertical: 10, paddingHorizontal: 16, borderRadius: 8, backgroundColor: '#0ea5e9' },
+    miniMazeOptionButtonCorrect: { backgroundColor: '#10b981' },
+    miniMazeOptionButtonCorrectText: { color: 'white' },
+    orderWordsCard: { backgroundColor: '#e0f2fe', padding: 24, borderRadius: 8, width: '100%', alignItems: 'center' },
+    orderedLettersContainer: { minHeight: 40, width: '100%', backgroundColor: 'white', borderRadius: 8, borderWidth: 1, borderColor: '#7dd3fc', padding: 10, marginBottom: 16, justifyContent: 'center' },
+    orderedLettersText: { fontSize: 20, fontWeight: 'bold', letterSpacing: 2, textAlign: 'center', color: '#0c4a6e' },
+    shuffledLettersContainer: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 10 },
+    letterButton: { backgroundColor: 'white', width: 40, height: 40, justifyContent: 'center', alignItems: 'center', borderRadius: 8, borderWidth: 1, borderColor: '#7dd3fc' },
+    letterButtonText: { fontSize: 18, fontWeight: 'bold', color: '#075985' },
+    sopaGrid: { display: 'flex', flexDirection: 'row', flexWrap: 'wrap', width: 256, alignSelf: 'center', borderWidth: 1, borderColor: '#d1d5db' },
+    sopaCell: { width: 32, height: 32, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#e5e7eb' },
+    sopaCellText: { fontSize: 16, fontWeight: 'bold' },
+    sopaWordsTitle: { fontSize: 16, fontWeight: 'bold', marginTop: 16, textAlign: 'center' },
+    sopaWordsList: { fontSize: 14, textAlign: 'center', color: '#4b5563' },
+});
+
+// Exportar el componente principal envuelto en el proveedor de contexto
+export default function AppWrapper() {
+    return (
+        <AppProvider>
+            <App />
+        </AppProvider>
+    );
+}
